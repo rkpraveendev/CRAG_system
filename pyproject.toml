@@ -1,0 +1,20 @@
+[project]
+name = "agentic-crag-system"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "python-dotenv>=1.2.3",
+    "supabase>=2.32.0",
+]
+
+[project.scripts]
+agentic-crag-system = "agentic_crag_system:main"
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = false
