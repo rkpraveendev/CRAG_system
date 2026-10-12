@@ -1,28 +1,5 @@
-import os
 from getpass import getpass
-from dotenv import load_dotenv
-from supabase import create_client, Client
-
-# Load environment variables from .env
-load_dotenv()
-
-
-def load_the_env(name: str) -> str:
-    try:
-        value = os.getenv(name)
-    except Exception as e:
-        raise ValueError(f"Error fetching {name}: {e}")
-    if not value:
-        raise ValueError(f"{name} is missing.")
-    return value
-
-
-url = load_the_env("SUPABASE_URL")
-anon_key = load_the_env("SUPABASE_ANON_KEY")
-
-
-supabase: Client = create_client(url, anon_key)
-
+from client import supabase
 response = supabase.table("collections").select("id").execute()
 response_data = response.data or []
 
@@ -32,6 +9,8 @@ collection_ids = [
 ]
 
 print("Before sign-in:", collection_ids)
+if collection_ids:
+    raise AssertionError("Unsigned client unexpectedly read collections.")
 
 email = input("Test user email: ")
 password = getpass("Test user password: ")
@@ -43,8 +22,15 @@ supabase.auth.sign_in_with_password(
     }
 )
 
-print("After sign-in:", [item["id"] for item in (supabase.table("collections").select("id").execute().data or [])])
+signed_in_ids = [item["id"] for item in (supabase.table("collections").select("id").execute().data or [])]
+print("After sign-in:", signed_in_ids)
+expected_ids = {"technical_docs", "sec_filings", "research_papers", "policy_reports"}
+if len(signed_in_ids) != len(expected_ids) or set(signed_in_ids) != expected_ids:
+    raise AssertionError("Signed-in client did not read exactly the four expected collections.")
 
 supabase.auth.sign_out()
 
-print("After sign-out:", [item["id"] for item in (supabase.table("collections").select("id").execute().data or [])])
+signed_out_ids = [item["id"] for item in (supabase.table("collections").select("id").execute().data or [])]
+print("After sign-out:", signed_out_ids)
+if signed_out_ids:
+    raise AssertionError("Signed-out client unexpectedly read collections.")

@@ -12,8 +12,6 @@ row_data = {
     }
 
 
-
-
 try:
     response = (
         supabase.table("grading_log")
@@ -21,10 +19,39 @@ try:
         .execute()
     )
 except Exception as e:
-    print(f"Anon insert failed. Check that the error says permission was denied: {e}")
+    if getattr(e, "code", None) != "42501":
+        raise
+    print(f"Anon insert denied as expected: {e}")
 
 else:
     print("Anon insert succeeded unexpectedly; check the table permissions and remove the test row.")
+    if response.data:
+        inserted_row_id = response.data[0]["id"]
+
+        delete_response = (
+            supabase_admin.table("grading_log")
+            .delete()
+            .eq("id", inserted_row_id)
+            .execute()
+        )
+
+        lookup_response = (
+            supabase_admin.table("grading_log")
+            .select("*")
+            .eq("id", inserted_row_id)
+            .execute()
+        )
+
+        if lookup_response.data:
+            raise RuntimeError("Test row was not deleted; check grading_log for the test row.")
+        else:
+            print("Deleted successfully:", delete_response.data)
+            raise RuntimeError("Anon insert was unexpectedly successful; check the table permissions and remove the test row.")
+
+    else:
+        raise RuntimeError("Anon insert succeeded but returned no row ID; check grading_log for the test row.")
+
+
 
 
 
@@ -36,6 +63,7 @@ try:
     )
 except Exception as e:
     print(f"Admin insert failed unexpectedly: {e}")
+    raise RuntimeError(f"Admin insert failed unexpectedly: {e}")
 
 else:
     if not admin_response.data:
